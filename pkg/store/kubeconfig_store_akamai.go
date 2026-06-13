@@ -31,6 +31,12 @@ import (
 	"github.com/MichaelSp/kswitch/types"
 )
 
+func init() {
+	Register(types.StoreKindAkamai, func(s types.KubeconfigStore, deps Dependencies) (storetypes.KubeconfigStore, error) {
+		return NewAkamaiStore(s)
+	})
+}
+
 func NewAkamaiStore(store types.KubeconfigStore) (*AkamaiStore, error) {
 	akamaiStoreConfig, err := ParseStoreConfig[types.StoreConfigAkamai](store)
 	if err != nil {
@@ -71,6 +77,9 @@ func (s *AkamaiStore) InitializeAkamaiStore() error {
 }
 
 func (s *AkamaiStore) GetContextPrefix(path string) string {
+	if s.GetStoreConfig().ShowPrefix != nil && !*s.GetStoreConfig().ShowPrefix {
+		return ""
+	}
 	return fmt.Sprintf("%s/%s", s.GetKind(), path)
 }
 

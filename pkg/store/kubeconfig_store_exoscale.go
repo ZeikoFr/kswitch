@@ -28,6 +28,12 @@ import (
 	"github.com/MichaelSp/kswitch/types"
 )
 
+func init() {
+	Register(types.StoreKindExoscale, func(s types.KubeconfigStore, deps Dependencies) (storetypes.KubeconfigStore, error) {
+		return NewExoscaleStore(s)
+	})
+}
+
 func NewExoscaleStore(store types.KubeconfigStore) (*ExoscaleStore, error) {
 	exoscaleStoreConfig, err := ParseStoreConfig[types.StoreConfigExoscale](store)
 	if err != nil {

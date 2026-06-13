@@ -90,6 +90,12 @@ type GardenctlV2Garden struct {
 }
 
 // NewGardenerStore creates a new Gardener store
+func init() {
+	Register(types.StoreKindGardener, func(s types.KubeconfigStore, deps Dependencies) (storetypes.KubeconfigStore, error) {
+		return NewGardenerStore(s, deps.StateDirectory)
+	})
+}
+
 func NewGardenerStore(store types.KubeconfigStore, stateDir string) (*GardenerStore, error) {
 	config, err := gardenerstore.GetStoreConfig(store)
 	if err != nil {

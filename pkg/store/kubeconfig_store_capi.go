@@ -31,6 +31,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+func init() {
+	Register(types.StoreKindCapi, func(s types.KubeconfigStore, deps Dependencies) (storetypes.KubeconfigStore, error) {
+		return NewCapiStore(s, deps.StateDirectory)
+	})
+}
+
 func NewCapiStore(store types.KubeconfigStore, stateDir string) (*CapiStore, error) {
 	storeConfig, err := ParseStoreConfig[types.StoreConfigCapi](store)
 	if err != nil {
@@ -56,6 +62,9 @@ func (s *CapiStore) InitializeCapiStore() error {
 
 // GetContextPrefix returns the context prefix
 func (s *CapiStore) GetContextPrefix(path string) string {
+	if s.GetStoreConfig().ShowPrefix != nil && !*s.GetStoreConfig().ShowPrefix {
+		return ""
+	}
 	return string(types.StoreKindCapi)
 }
 

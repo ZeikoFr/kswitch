@@ -24,6 +24,12 @@ import (
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 )
 
+func init() {
+	Register(types.StoreKindRancher, func(s types.KubeconfigStore, deps Dependencies) (storetypes.KubeconfigStore, error) {
+		return NewRancherStore(s)
+	})
+}
+
 func NewRancherStore(store types.KubeconfigStore) (*RancherStore, error) {
 	rancherStoreConfig, err := ParseStoreConfig[types.StoreConfigRancher](store)
 	if err != nil {

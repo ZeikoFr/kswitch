@@ -38,6 +38,12 @@ func init() {
 	utilruntime.Must(apiv1.AddToScheme(scheme))
 }
 
+func init() {
+	Register(types.StoreKindAzure, func(s types.KubeconfigStore, deps Dependencies) (storetypes.KubeconfigStore, error) {
+		return NewAzureStore(s, deps.StateDirectory)
+	})
+}
+
 // NewAzureStore creates a new Azure store
 func NewAzureStore(store types.KubeconfigStore, stateDir string) (*AzureStore, error) {
 	storeConfig, err := ParseStoreConfig[types.StoreConfigAzure](store)

@@ -32,6 +32,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+func init() {
+	Register(types.StoreKindEKS, func(s types.KubeconfigStore, deps Dependencies) (storetypes.KubeconfigStore, error) {
+		return NewEKSStore(s, deps.StateDirectory)
+	})
+}
+
 func NewEKSStore(store types.KubeconfigStore, stateDir string) (*EKSStore, error) {
 	eksStoreConfig, err := ParseStoreConfig[types.StoreConfigEKS](store)
 	if err != nil {
