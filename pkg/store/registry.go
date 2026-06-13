@@ -15,6 +15,7 @@
 package store
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"sync"
@@ -22,6 +23,10 @@ import (
 	storetypes "github.com/MichaelSp/kswitch/pkg/store/types"
 	"github.com/MichaelSp/kswitch/types"
 )
+
+// ErrUnknownStoreKind is returned by Create when no factory is registered for
+// the requested store kind. Callers can match it with errors.Is.
+var ErrUnknownStoreKind = errors.New("unknown store kind")
 
 // Dependencies carries the process-wide inputs that some store constructors
 // need in addition to their per-store configuration. It lets every store be
@@ -68,7 +73,7 @@ func Create(store types.KubeconfigStore, deps Dependencies) (storetypes.Kubeconf
 	factory, ok := registry[store.Kind]
 	registryMu.RUnlock()
 	if !ok {
-		return nil, fmt.Errorf("unknown store %q", store.Kind)
+		return nil, fmt.Errorf("%w %q", ErrUnknownStoreKind, store.Kind)
 	}
 	return factory(store, deps)
 }

@@ -15,6 +15,7 @@
 package store
 
 import (
+	"errors"
 	"slices"
 	"testing"
 
@@ -36,8 +37,12 @@ func TestRegisteredKindsMatchValidStoreKinds(t *testing.T) {
 }
 
 func TestCreate_UnknownKind(t *testing.T) {
-	if _, err := Create(types.KubeconfigStore{Kind: types.StoreKind("does-not-exist")}, Dependencies{}); err == nil {
+	_, err := Create(types.KubeconfigStore{Kind: types.StoreKind("does-not-exist")}, Dependencies{})
+	if err == nil {
 		t.Fatal("expected an error for an unknown store kind")
+	}
+	if !errors.Is(err, ErrUnknownStoreKind) {
+		t.Errorf("error %v is not ErrUnknownStoreKind", err)
 	}
 }
 
