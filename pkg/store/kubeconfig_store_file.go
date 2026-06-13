@@ -34,6 +34,8 @@ func init() {
 	})
 }
 
+var _ storetypes.KubeconfigStore = (*FilesystemStore)(nil)
+
 func NewFilesystemStore(
 	kubeconfigName string,
 	kubeconfigStore types.KubeconfigStore,
