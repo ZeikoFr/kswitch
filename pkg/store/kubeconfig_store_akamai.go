@@ -38,6 +38,8 @@ func init() {
 	})
 }
 
+var _ storetypes.KubeconfigStore = (*AkamaiStore)(nil)
+
 func NewAkamaiStore(store types.KubeconfigStore) (*AkamaiStore, error) {
 	akamaiStoreConfig, err := ParseStoreConfig[types.StoreConfigAkamai](store)
 	if err != nil {
