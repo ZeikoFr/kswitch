@@ -70,10 +70,13 @@ func (b *BaseStore) GetStoreConfig() types.KubeconfigStore {
 	return b.KubeconfigStore
 }
 
-// GetLogger returns the logger of the store, lazily creating it if necessary.
+// GetLogger returns the logger of the store. NewBaseStore always sets it; the
+// nil guard only protects a BaseStore built without the constructor and returns
+// a fresh entry without mutating the receiver (so GetLogger stays safe to call
+// concurrently).
 func (b *BaseStore) GetLogger() *logrus.Entry {
 	if b.Logger == nil {
-		b.Logger = logrus.WithField("store", b.Kind)
+		return logrus.WithField("store", b.Kind)
 	}
 	return b.Logger
 }
