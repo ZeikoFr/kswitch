@@ -307,47 +307,15 @@ func (s *GKEStore) GetKubeconfigForPath(path string, _ map[string]string) ([]byt
 		}
 	}
 
-	kubeconfig := &types.KubeConfig{
-		TypeMeta: types.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Config",
-		},
-		Clusters: []types.KubeCluster{{
-			Name: contextName,
-			Cluster: types.Cluster{
-				CertificateAuthorityData: certificate,
-				Server:                   fmt.Sprintf("https://%s", endpoint),
-			},
-		}},
-		CurrentContext: contextName,
-		Contexts: []types.KubeContext{
-			{
-				Name: contextName,
-				Context: types.Context{
-					Cluster: contextName,
-					User:    contextName,
-				},
-			},
-		},
-		Users: []types.KubeUser{
-			{
-				Name: contextName,
-				User: types.User{
-					ExecProvider: &types.ExecProvider{
-						APIVersion:         "client.authentication.k8s.io/v1beta1",
-						Args:               args,
-						Command:            "gke-gcloud-auth-plugin",
-						InstallHint:        "Install gke-gcloud-auth-plugin for use with kubectl by following\nhttps://cloud.google.com/blog/products/containers-kubernetes/kubectl-auth-changes-in-gke",
-						ProvideClusterInfo: true,
-					},
-				},
-			},
-		},
-	}
+	kubeconfig := buildExecKubeconfig(contextName, fmt.Sprintf("https://%s", endpoint), certificate, &types.ExecProvider{
+		APIVersion:         execAuthAPIVersion,
+		Args:               args,
+		Command:            "gke-gcloud-auth-plugin",
+		InstallHint:        "Install gke-gcloud-auth-plugin for use with kubectl by following\nhttps://cloud.google.com/blog/products/containers-kubernetes/kubectl-auth-changes-in-gke",
+		ProvideClusterInfo: true,
+	})
 
-	bytes, err := yaml.Marshal(kubeconfig)
-
-	return bytes, err
+	return yaml.Marshal(kubeconfig)
 }
 
 // getGcloudBinaryPath tries to lookup the gcloud binary path
