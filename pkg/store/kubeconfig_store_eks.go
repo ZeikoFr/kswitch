@@ -211,55 +211,23 @@ func (s *EKSStore) GetKubeconfigForPath(path string, _ map[string]string) ([]byt
 		return nil, fmt.Errorf("cluster CA certificate not found for cluster=%s", *cluster.Arn)
 	}
 
-	kubeconfig := &types.KubeConfig{
-		TypeMeta: types.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Config",
+	kubeconfig := buildExecKubeconfig(contextName, *cluster.Endpoint, *cluster.CertificateAuthority.Data, &types.ExecProvider{
+		APIVersion: execAuthAPIVersion,
+		Command:    "aws",
+		Args: []string{
+			"--region",
+			*s.Config.Region,
+			"eks",
+			"get-token",
+			"--cluster-name",
+			*cluster.Name,
 		},
-		Clusters: []types.KubeCluster{{
-			Name: contextName,
-			Cluster: types.Cluster{
-				CertificateAuthorityData: *cluster.CertificateAuthority.Data,
-				Server:                   *cluster.Endpoint,
-			},
-		}},
-		CurrentContext: contextName,
-		Contexts: []types.KubeContext{
-			{
-				Name: contextName,
-				Context: types.Context{
-					Cluster: contextName,
-					User:    contextName,
-				},
-			},
+		Env: []types.EnvMap{
+			{Name: "AWS_PROFILE", Value: s.Config.Profile},
 		},
-		Users: []types.KubeUser{
-			{
-				Name: contextName,
-				User: types.User{
-					ExecProvider: &types.ExecProvider{
-						APIVersion: "client.authentication.k8s.io/v1beta1",
-						Command:    "aws",
-						Args: []string{
-							"--region",
-							*s.Config.Region,
-							"eks",
-							"get-token",
-							"--cluster-name",
-							*cluster.Name,
-						},
-						Env: []types.EnvMap{
-							{Name: "AWS_PROFILE", Value: s.Config.Profile},
-						},
-					},
-				},
-			},
-		},
-	}
+	})
 
-	bytes, err := yaml.Marshal(kubeconfig)
-
-	return bytes, err
+	return yaml.Marshal(kubeconfig)
 }
 
 func (s *EKSStore) GetSearchPreview(path string, optionalTags map[string]string) (string, error) {
