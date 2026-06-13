@@ -86,7 +86,7 @@ func NewEKSStore(store types.KubeconfigStore, stateDir string) (*EKSStore, error
 		BaseStore:          NewBaseStore(types.StoreKindEKS, store),
 		Config:             eksStoreConfig,
 		StateDirectory:     stateDir,
-		DiscoveredClusters: make(map[string]*awsekstypes.Cluster),
+		DiscoveredClusters: newClusterCache[string, *awsekstypes.Cluster](),
 	}, nil
 }
 
@@ -189,13 +189,13 @@ func (s *EKSStore) GetKubeconfigForPath(path string, _ map[string]string) ([]byt
 		return nil, err
 	}
 
-	cluster := s.DiscoveredClusters[path]
-	if cluster == nil {
+	cluster, ok := s.DiscoveredClusters.Get(path)
+	if !ok {
 		resp, err := s.Client.DescribeCluster(ctx, &awseks.DescribeClusterInput{Name: &clusterName})
 		if err != nil {
 			return nil, err
 		}
-		s.DiscoveredClusters[path] = resp.Cluster
+		s.DiscoveredClusters.Set(path, resp.Cluster)
 		cluster = resp.Cluster
 	}
 
@@ -279,11 +279,11 @@ func (s *EKSStore) GetSearchPreview(path string, optionalTags map[string]string)
 	}
 
 	// the cluster should be in the cache, but do not fail if it is not
-	cluster := s.DiscoveredClusters[path]
+	cluster, ok := s.DiscoveredClusters.Get(path)
 
 	// cluster has not been discovered from the EKS API yet
 	// this is the case when a search index is used
-	if cluster == nil {
+	if !ok {
 		// The name of the cluster to retrieve.
 		// we can safely use the client, as we know the store has been previously initialized
 		resp, err := s.Client.DescribeCluster(ctx, &awseks.DescribeClusterInput{Name: &clusterName})
@@ -291,7 +291,7 @@ func (s *EKSStore) GetSearchPreview(path string, optionalTags map[string]string)
 			return "", fmt.Errorf("failed to get Eks cluster with name %q : %w", clusterName, err)
 		}
 		cluster = resp.Cluster
-		s.DiscoveredClusters[path] = cluster
+		s.DiscoveredClusters.Set(path, cluster)
 	}
 
 	asciTree := gotree.New(clusterName)
