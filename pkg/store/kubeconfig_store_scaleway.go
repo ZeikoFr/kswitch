@@ -20,27 +20,17 @@ import (
 	"github.com/scaleway/scaleway-sdk-go/api/account/v3"
 	"github.com/scaleway/scaleway-sdk-go/api/k8s/v1"
 	"github.com/scaleway/scaleway-sdk-go/scw"
-	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
 
 	storetypes "github.com/MichaelSp/kswitch/pkg/store/types"
 	"github.com/MichaelSp/kswitch/types"
 )
 
 func NewScalewayStore(store types.KubeconfigStore) (*ScalewayStore, error) {
-	scalewayStoreConfig := &types.StoreConfigScaleway{}
-	if store.Config != nil {
-		buf, err := yaml.Marshal(store.Config)
-		if err != nil {
-			return nil, fmt.Errorf("failed to process Scaleway store config: %w", err)
-		}
-
-		err = yaml.Unmarshal(buf, scalewayStoreConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal Scaleway config: %w", err)
-		}
+	scalewayStoreConfig, err := ParseStoreConfig[types.StoreConfigScaleway](store)
+	if err != nil {
+		return nil, err
 	}
-	logger := logrus.New().WithField("store", types.StoreKindScaleway)
+	base := NewBaseStore(types.StoreKindScaleway, store)
 
 	scalewayAccessKey := scalewayStoreConfig.ScalewayAccessKey
 	if len(scalewayAccessKey) == 0 {
@@ -56,7 +46,7 @@ func NewScalewayStore(store types.KubeconfigStore) (*ScalewayStore, error) {
 	}
 	scalewayRegion := scalewayStoreConfig.ScalewayRegion
 	if len(scalewayRegion) == 0 {
-		logger.Warning("No region specified for scaleway, using default 'fr-par'")
+		base.Logger.Warning("No region specified for scaleway, using default 'fr-par'")
 		scalewayRegion = "fr-par"
 	}
 
@@ -70,8 +60,7 @@ func NewScalewayStore(store types.KubeconfigStore) (*ScalewayStore, error) {
 	}
 
 	return &ScalewayStore{
-		Logger:             logger,
-		KubeconfigStore:    store,
+		BaseStore:          base,
 		Client:             client,
 		DiscoveredClusters: make(map[string]ScalewayKube),
 	}, nil
@@ -81,14 +70,6 @@ type ScalewayKube struct {
 	ID      string
 	Name    string
 	Project string
-}
-
-func (s *ScalewayStore) GetID() string {
-	id := "default"
-	if s.KubeconfigStore.ID != nil {
-		id = *s.KubeconfigStore.ID
-	}
-	return fmt.Sprintf("%s.%s", types.StoreKindScaleway, id)
 }
 
 func (s *ScalewayStore) GetContextPrefix(path string) string {
@@ -101,18 +82,6 @@ func (s *ScalewayStore) GetContextPrefix(path string) string {
 	}
 
 	return string(types.StoreKindScaleway)
-}
-
-func (r *ScalewayStore) GetKind() types.StoreKind {
-	return types.StoreKindScaleway
-}
-
-func (s *ScalewayStore) GetStoreConfig() types.KubeconfigStore {
-	return s.KubeconfigStore
-}
-
-func (s *ScalewayStore) GetLogger() *logrus.Entry {
-	return s.Logger
 }
 
 func (s *ScalewayStore) StartSearch(channel chan storetypes.SearchResult) {
@@ -189,8 +158,4 @@ func (s *ScalewayStore) GetKubeconfigForPath(path string, _ map[string]string) (
 		return nil, fmt.Errorf("failed to get kubeconfig for cluster '%s': %w", path, err)
 	}
 	return config.GetRaw(), nil
-}
-
-func (r *ScalewayStore) VerifyKubeconfigPaths() error {
-	return nil
 }

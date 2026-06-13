@@ -25,7 +25,6 @@ import (
 	storetypes "github.com/MichaelSp/kswitch/pkg/store/types"
 	"github.com/disiqueira/gotree"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 
 	"github.com/MichaelSp/kswitch/types"
@@ -61,9 +60,8 @@ func NewDigitalOceanStore(store types.KubeconfigStore) (*DigitalOceanStore, erro
 	}
 
 	return &DigitalOceanStore{
-		Logger:          logrus.New().WithField("store", types.StoreKindDigitalOcean),
-		KubeconfigStore: store,
-		Config:          *doctlConfig,
+		BaseStore: NewBaseStore(types.StoreKindDigitalOcean, store),
+		Config:    *doctlConfig,
 	}, nil
 }
 
@@ -217,28 +215,6 @@ func (s *DigitalOceanStore) IsInitialized() bool {
 	return len(s.ContextToKubernetesService) > 0
 }
 
-func (s *DigitalOceanStore) GetID() string {
-	id := "default"
-
-	if s.KubeconfigStore.ID != nil {
-		id = *s.KubeconfigStore.ID
-	}
-
-	return fmt.Sprintf("%s.%s", types.StoreKindDigitalOcean, id)
-}
-
-func (s *DigitalOceanStore) GetKind() types.StoreKind {
-	return types.StoreKindDigitalOcean
-}
-
-func (s *DigitalOceanStore) GetStoreConfig() types.KubeconfigStore {
-	return s.KubeconfigStore
-}
-
-func (s *DigitalOceanStore) GetLogger() *logrus.Entry {
-	return s.Logger
-}
-
 // GetKubeconfigForPath gets the kubeconfig bytes for the given kubeconfig path and tags
 // For this store, instead of using the path to identify the kubeconfig in the backing store, the cluster ID in the tags metadata
 // is used. Reason: the clusterID is a long non-intuitive string that we don't want to
@@ -277,11 +253,6 @@ func (d *DigitalOceanStore) GetKubeconfigForPath(path string, tags map[string]st
 	}
 
 	return kubeconfigBytes, nil
-}
-
-func (s *DigitalOceanStore) VerifyKubeconfigPaths() error {
-	// NOOP
-	return nil
 }
 
 // ParseIdentifier takes a kubeconfig identifier and
