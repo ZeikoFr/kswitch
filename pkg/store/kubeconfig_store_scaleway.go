@@ -25,6 +25,12 @@ import (
 	"github.com/MichaelSp/kswitch/types"
 )
 
+func init() {
+	Register(types.StoreKindScaleway, func(s types.KubeconfigStore, deps Dependencies) (storetypes.KubeconfigStore, error) {
+		return NewScalewayStore(s)
+	})
+}
+
 func NewScalewayStore(store types.KubeconfigStore) (*ScalewayStore, error) {
 	scalewayStoreConfig, err := ParseStoreConfig[types.StoreConfigScaleway](store)
 	if err != nil {
@@ -71,6 +77,13 @@ type ScalewayKube struct {
 	Name    string
 	Project string
 }
+
+const (
+	// tagScalewayClusterID is the search-result tag holding the unique Scaleway cluster ID
+	tagScalewayClusterID = "clusterID"
+	// tagScalewayProjectID is the search-result tag holding the Scaleway project ID
+	tagScalewayProjectID = "projectID"
+)
 
 func (s *ScalewayStore) GetContextPrefix(path string) string {
 	if s.GetStoreConfig().ShowPrefix != nil && !*s.GetStoreConfig().ShowPrefix {
@@ -133,26 +146,43 @@ func (s *ScalewayStore) StartSearch(channel chan storetypes.SearchResult) {
 			s.DiscoveredClusters[cluster.ID] = ScalewayKube{ID: cluster.ID, Name: cluster.Name, Project: project.ID}
 			channel <- storetypes.SearchResult{
 				KubeconfigPath: cluster.Name,
-				Error:          nil,
+				// the cluster ID uniquely identifies the cluster in the Scaleway
+				// API. It is carried in the tags so the kubeconfig can be fetched
+				// without relying on the in-memory cache (e.g. when a search index
+				// is used) and without colliding on duplicate cluster names.
+				Tags: map[string]string{
+					tagScalewayClusterID: cluster.ID,
+					tagScalewayProjectID: project.ID,
+				},
+				Error: nil,
 			}
 		}
 	}
 }
 
-func (s *ScalewayStore) GetKubeconfigForPath(path string, _ map[string]string) ([]byte, error) {
+func (s *ScalewayStore) GetKubeconfigForPath(path string, tags map[string]string) ([]byte, error) {
 	s.Logger.Debugf("Scaleway: getting secret for path %q", path)
 
-	var cluster ScalewayKube
-	for _, c := range s.DiscoveredClusters {
-		if c.Name == path {
-			cluster = c
+	// prefer the cluster ID carried in the tags (set during the search): it is
+	// unique and works even when the in-memory cache is empty (search index).
+	clusterID := tags[tagScalewayClusterID]
+	if clusterID == "" {
+		// fallback for entries without tags: resolve the ID from the cache by name
+		for _, c := range s.DiscoveredClusters {
+			if c.Name == path {
+				clusterID = c.ID
+				break
+			}
 		}
+	}
+	if clusterID == "" {
+		return nil, fmt.Errorf("could not resolve a Scaleway cluster ID for %q", path)
 	}
 
 	kapi := k8s.NewAPI(s.Client)
 
 	config, err := kapi.GetClusterKubeConfig(&k8s.GetClusterKubeConfigRequest{
-		ClusterID: cluster.ID,
+		ClusterID: clusterID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get kubeconfig for cluster '%s': %w", path, err)

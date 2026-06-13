@@ -23,6 +23,12 @@ import (
 	"github.com/MichaelSp/kswitch/types"
 )
 
+func init() {
+	Register(types.StoreKindOVH, func(s types.KubeconfigStore, deps Dependencies) (storetypes.KubeconfigStore, error) {
+		return NewOVHStore(s)
+	})
+}
+
 func NewOVHStore(store types.KubeconfigStore) (*OVHStore, error) {
 	ovhStoreConfig, err := ParseStoreConfig[types.StoreConfigOVH](store)
 	if err != nil {

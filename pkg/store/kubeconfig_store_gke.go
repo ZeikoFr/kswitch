@@ -42,6 +42,12 @@ func init() {
 	utilruntime.Must(apiv1.AddToScheme(scheme))
 }
 
+func init() {
+	Register(types.StoreKindGKE, func(s types.KubeconfigStore, deps Dependencies) (storetypes.KubeconfigStore, error) {
+		return NewGKEStore(s, deps.StateDirectory)
+	})
+}
+
 // NewGKEStore creates a new GKE store
 func NewGKEStore(store types.KubeconfigStore, stateDir string) (*GKEStore, error) {
 	gkeStoreConfig, err := ParseStoreConfig[types.StoreConfigGKE](store)

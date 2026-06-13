@@ -46,6 +46,19 @@ const (
 	tagDOKSClusterName = "name"
 )
 
+func init() {
+	Register(types.StoreKindDigitalOcean, func(s types.KubeconfigStore, deps Dependencies) (storetypes.KubeconfigStore, error) {
+		// NewDigitalOceanStore returns a nil store when no doctl config is
+		// present. Return an untyped nil so Create's (nil, nil) opt-out
+		// contract holds instead of a typed-nil-in-interface.
+		doStore, err := NewDigitalOceanStore(s)
+		if doStore == nil {
+			return nil, err
+		}
+		return doStore, err
+	})
+}
+
 // NewDigitalOceanStore creates a new DigitalOcean store
 func NewDigitalOceanStore(store types.KubeconfigStore) (*DigitalOceanStore, error) {
 	doctlConfig, err := doks.GetDoctlConfiguration()

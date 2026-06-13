@@ -31,6 +31,12 @@ import (
 	"github.com/MichaelSp/kswitch/types"
 )
 
+func init() {
+	Register(types.StoreKindVault, func(s types.KubeconfigStore, deps Dependencies) (storetypes.KubeconfigStore, error) {
+		return NewVaultStore(deps.VaultAPIAddressFromFlag, deps.VaultTokenFileName, deps.KubeconfigName, s)
+	})
+}
+
 func NewVaultStore(vaultAPIAddressFromFlag, vaultTokenFileName, kubeconfigName string, kubeconfigStore types.KubeconfigStore) (*VaultStore, error) {
 	vaultStoreConfig, err := ParseStoreConfig[types.StoreConfigVault](kubeconfigStore)
 	if err != nil {
