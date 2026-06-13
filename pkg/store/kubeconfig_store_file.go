@@ -29,6 +29,12 @@ import (
 	"github.com/MichaelSp/kswitch/types"
 )
 
+func init() {
+	Register(types.StoreKindFilesystem, func(s types.KubeconfigStore, deps Dependencies) (storetypes.KubeconfigStore, error) {
+		return NewFilesystemStore(deps.KubeconfigName, s)
+	})
+}
+
 func NewFilesystemStore(
 	kubeconfigName string,
 	kubeconfigStore types.KubeconfigStore,

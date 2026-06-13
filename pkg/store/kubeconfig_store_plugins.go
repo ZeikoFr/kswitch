@@ -26,6 +26,12 @@ import (
 	"github.com/MichaelSp/kswitch/types"
 )
 
+func init() {
+	Register(types.StoreKindPlugin, func(s types.KubeconfigStore, deps Dependencies) (storetypes.KubeconfigStore, error) {
+		return NewPluginStore(s)
+	})
+}
+
 func NewPluginStore(store types.KubeconfigStore) (*PluginStore, error) {
 	storePlugin, err := ParseStoreConfig[types.StoreConfigPlugin](store)
 	if err != nil {
