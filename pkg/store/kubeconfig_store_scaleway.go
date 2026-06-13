@@ -70,7 +70,7 @@ func NewScalewayStore(store types.KubeconfigStore) (*ScalewayStore, error) {
 	return &ScalewayStore{
 		BaseStore:          base,
 		Client:             client,
-		DiscoveredClusters: make(map[string]ScalewayKube),
+		DiscoveredClusters: newClusterCache[string, ScalewayKube](),
 	}, nil
 }
 
@@ -145,7 +145,7 @@ func (s *ScalewayStore) StartSearch(channel chan storetypes.SearchResult) {
 			continue
 		}
 		for _, cluster := range cres.Clusters {
-			s.DiscoveredClusters[cluster.ID] = ScalewayKube{ID: cluster.ID, Name: cluster.Name, Project: project.ID}
+			s.DiscoveredClusters.Set(cluster.ID, ScalewayKube{ID: cluster.ID, Name: cluster.Name, Project: project.ID})
 			channel <- storetypes.SearchResult{
 				KubeconfigPath: cluster.Name,
 				// the cluster ID uniquely identifies the cluster in the Scaleway
@@ -170,7 +170,7 @@ func (s *ScalewayStore) GetKubeconfigForPath(path string, tags map[string]string
 	clusterID := tags[tagScalewayClusterID]
 	if clusterID == "" {
 		// fallback for entries without tags: resolve the ID from the cache by name
-		for _, c := range s.DiscoveredClusters {
+		for _, c := range s.DiscoveredClusters.Values() {
 			if c.Name == path {
 				clusterID = c.ID
 				break

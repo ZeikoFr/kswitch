@@ -79,7 +79,7 @@ type EKSStore struct {
 	// DiscoveredClusters maps the kubeconfig path (az_<resource-group>--<cluster-name>) -> cluster
 	// This is a cache for the clusters discovered during the initial search for kubeconfig paths
 	// when not using a search index
-	DiscoveredClusters map[string]*eks.Cluster
+	DiscoveredClusters *clusterCache[string, *eks.Cluster]
 	StateDirectory     string
 }
 
@@ -90,7 +90,7 @@ type GKEStore struct {
 	// DiscoveredClusters maps the kubeconfig path (gke--project-name--clusterName) -> cluster
 	// This is a cache for the clusters discovered during the initial search for kubeconfig paths
 	// when not using a search index
-	DiscoveredClusters map[string]*gkev1.Cluster
+	DiscoveredClusters *clusterCache[string, *gkev1.Cluster]
 	// ProjectNameToID contains a mapping projectName -> project ID
 	// used to construct the kubeconfig path containing the project name instead of a technical project id
 	ProjectNameToID map[string]string
@@ -99,23 +99,19 @@ type GKEStore struct {
 
 type AzureStore struct {
 	BaseStore
-	// DiscoveredClustersMutex is a mutex allow many reads, one write mutex to synchronize writes
-	// to the DiscoveredClusters map.
-	// This can happen when a goroutine still discovers clusters while another goroutine computes the preview for a missing cluster.
-	DiscoveredClustersMutex sync.RWMutex
-	AksClient               *armcontainerservice.ManagedClustersClient
-	Config                  *types.StoreConfigAzure
+	AksClient *armcontainerservice.ManagedClustersClient
+	Config    *types.StoreConfigAzure
 	// DiscoveredClusters maps the kubeconfig path (az_<resource-group>--<cluster-name>) -> cluster
 	// This is a cache for the clusters discovered during the initial search for kubeconfig paths
 	// when not using a search index
-	DiscoveredClusters map[string]*armcontainerservice.ManagedCluster
+	DiscoveredClusters *clusterCache[string, *armcontainerservice.ManagedCluster]
 	StateDirectory     string
 }
 
 type ExoscaleStore struct {
 	BaseStore
 	Client             *exoscale.Client
-	DiscoveredClusters map[exoscale.UUID]ExoscaleKube
+	DiscoveredClusters *clusterCache[exoscale.UUID, ExoscaleKube]
 }
 
 type RancherStore struct {
@@ -127,13 +123,13 @@ type RancherStore struct {
 type OVHStore struct {
 	BaseStore
 	Client       *ovh.Client
-	OVHKubeCache map[string]OVHKube // map[clusterID]OVHKube
+	OVHKubeCache *clusterCache[string, OVHKube] // keyed by clusterID
 }
 
 type ScalewayStore struct {
 	BaseStore
 	Client             *scw.Client
-	DiscoveredClusters map[string]ScalewayKube
+	DiscoveredClusters *clusterCache[string, ScalewayKube]
 }
 
 type DigitalOceanStore struct {
