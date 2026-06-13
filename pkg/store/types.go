@@ -15,8 +15,6 @@
 package store
 
 import (
-	"sync"
-
 	"github.com/MichaelSp/kswitch/pkg/store/doks"
 	gardenclient "github.com/MichaelSp/kswitch/pkg/store/gardener/copied_gardenctlv2"
 	"github.com/MichaelSp/kswitch/pkg/store/plugins"
@@ -65,12 +63,9 @@ type GardenerStore struct {
 	LandscapeIdentity         string
 	LandscapeName             string
 	StateDirectory            string
-	CachePathToShoot          map[string]gardencorev1beta1.Shoot
-	PathToShootLock           sync.RWMutex
-	CachePathToManagedSeed    map[string]seedmanagementv1alpha1.ManagedSeed
-	PathToManagedSeedLock     sync.RWMutex
-	CacheCaSecretNameToSecret map[string]corev1.Secret
-	CaSecretNameToSecretLock  sync.RWMutex
+	CachePathToShoot          *clusterCache[string, gardencorev1beta1.Shoot]
+	CachePathToManagedSeed    *clusterCache[string, seedmanagementv1alpha1.ManagedSeed]
+	CacheCaSecretNameToSecret *clusterCache[string, corev1.Secret]
 }
 
 type EKSStore struct {
