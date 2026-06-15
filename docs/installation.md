@@ -5,33 +5,12 @@ The kswitch installation consists of both a `kswitch` binary and a shell script 
 **NOTE**: to invoke kswitch, do not call the `kswitch` binary directly from the command line. 
 Instead, use the sourced shell function as described in [source the shell function](#required-source-the-shell-function).
 
-## Option 1 - Homebrew
-**NOTE**: `fish` users please follow [install via Github releases](#option-2---github-releases) as the shell script only works for `zsh` and `bash` shells.
-
-Install the `kswitch` binary with `homebrew`.
-```
-brew install MichaelSp/switch/switch
-```
-
-Next, follow [required: source the shell function](#required-source-the-shell-function).
-
-### Option 2 - MacPorts
-**NOTE**: `fish` users please follow [install via Github releases](#option-2---github-releases) as the shell script only works for `zsh` and `bash` shells.
-
-Mac users can also install both `switch.sh` and `kswitch` from [MacPorts](https://www.macports.org)
-```
-sudo port selfupdate
-sudo port install kswitch
-```
-
-Next, follow [required: source the shell function](#required-source-the-shell-function).
-
-### Option 2 - Github releases
+## Option 1 - Github releases
 
 Download the kswitch binary
 ```sh
 OS=linux                        # Pick the right os: linux, darwin (intel only)
-VERSION=0.9.3                   # Pick the current version.
+VERSION=0.5.0                   # Pick the current version.
 
 curl -L -o /usr/local/bin/kswitch https://github.com/danielfoehrKn/kswitch/releases/download/${VERSION}/kswitch_${OS}_amd64
 chmod +x /usr/local/bin/kswitch
@@ -44,7 +23,7 @@ If you need to add a folder to the path for the current powershell session, you 
 
 Next, follow [required: source the shell function](#required-source-the-shell-function).
 
-### Option 3 - From source
+### Option 2 - From source
 
 ```
 go get github.com/MichaelSp/kswitch

@@ -57,7 +57,7 @@ Designed as a [drop-in replacement](#difference-to-kubectx) for [kubectx](https:
 
 ## Installation
 
-Kswitch can be installed using `brew` for OSX, MacPorts, from Github Releases or from source. 
+Kswitch can be installed from Github Releases or from source. 
 Please [see the documentation](docs/installation.md).
 
 ## Usage 
