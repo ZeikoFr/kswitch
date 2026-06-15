@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="resources/banner.svg" alt="kswitch banner" width="900"/>
+  <img src="resources/banner.png" alt="kswitch banner" width="900"/>
 </p>
 
 # Kswitch
