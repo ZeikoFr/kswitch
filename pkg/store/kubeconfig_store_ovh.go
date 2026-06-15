@@ -18,25 +18,15 @@ import (
 	"fmt"
 
 	"github.com/ovh/go-ovh/ovh"
-	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
 
 	storetypes "github.com/MichaelSp/kswitch/pkg/store/types"
 	"github.com/MichaelSp/kswitch/types"
 )
 
 func NewOVHStore(store types.KubeconfigStore) (*OVHStore, error) {
-	ovhStoreConfig := &types.StoreConfigOVH{}
-	if store.Config != nil {
-		buf, err := yaml.Marshal(store.Config)
-		if err != nil {
-			return nil, fmt.Errorf("failed to process OVH store config: %w", err)
-		}
-
-		err = yaml.Unmarshal(buf, ovhStoreConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal OVH config: %w", err)
-		}
+	ovhStoreConfig, err := ParseStoreConfig[types.StoreConfigOVH](store)
+	if err != nil {
+		return nil, err
 	}
 
 	ovhApplicationKey := ovhStoreConfig.OVHApplicationKey
@@ -62,10 +52,9 @@ func NewOVHStore(store types.KubeconfigStore) (*OVHStore, error) {
 	}
 
 	return &OVHStore{
-		Logger:          logrus.New().WithField("store", types.StoreKindOVH),
-		KubeconfigStore: store,
-		Client:          ovhClient,
-		OVHKubeCache:    make(map[string]OVHKube),
+		BaseStore:    NewBaseStore(types.StoreKindOVH, store),
+		Client:       ovhClient,
+		OVHKubeCache: make(map[string]OVHKube),
 	}, nil
 }
 
@@ -73,14 +62,6 @@ type OVHKube struct {
 	ID      string `json:"id"`
 	Name    string `json:"name"`
 	Project string
-}
-
-func (r *OVHStore) GetID() string {
-	id := "default"
-	if r.KubeconfigStore.ID != nil {
-		id = *r.KubeconfigStore.ID
-	}
-	return fmt.Sprintf("%s.%s", types.StoreKindOVH, id)
 }
 
 func (r *OVHStore) GetContextPrefix(path string) string {
@@ -93,18 +74,6 @@ func (r *OVHStore) GetContextPrefix(path string) string {
 	}
 
 	return string(types.StoreKindOVH)
-}
-
-func (r *OVHStore) GetKind() types.StoreKind {
-	return types.StoreKindOVH
-}
-
-func (r *OVHStore) GetStoreConfig() types.KubeconfigStore {
-	return r.KubeconfigStore
-}
-
-func (r *OVHStore) GetLogger() *logrus.Entry {
-	return r.Logger
 }
 
 func (r *OVHStore) StartSearch(channel chan storetypes.SearchResult) {
@@ -174,8 +143,4 @@ func (r *OVHStore) GetKubeconfigForPath(path string, _ map[string]string) ([]byt
 	}
 	return []byte(response.Content), nil
 
-}
-
-func (r *OVHStore) VerifyKubeconfigPaths() error {
-	return nil
 }
