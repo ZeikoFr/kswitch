@@ -23,8 +23,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/karrick/godirwalk"
-
 	storetypes "github.com/MichaelSp/kswitch/pkg/store/types"
 	"github.com/MichaelSp/kswitch/types"
 )
