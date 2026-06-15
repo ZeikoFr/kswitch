@@ -1,3 +1,7 @@
+---
+title: Hooks
+---
+
 # Hooks
 
 By providing a configuration file, the `kswitch` tool can call arbitrary hooks (an executable or inline shell command).
