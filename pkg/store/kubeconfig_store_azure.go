@@ -292,11 +292,11 @@ func (s *AzureStore) GetSearchPreview(path string, _ map[string]string) (string,
 	}
 
 	// the cluster should be in the cache, but do not fail if it is not
-	cluster, _ := s.DiscoveredClusters.Get(path)
+	cluster, hasCluster := s.DiscoveredClusters.Get(path)
 
 	// cluster has not been discovered from the AKS API yet
 	// this is the case when a search index is used
-	if cluster == nil {
+	if !hasCluster {
 		// The name (resource_group, cluster) of the cluster to retrieve.
 		// we can safely use the client, as we know the store has been previously initialized
 		resp, err := s.AksClient.Get(ctx, resourceGroup, clusterName, nil)
