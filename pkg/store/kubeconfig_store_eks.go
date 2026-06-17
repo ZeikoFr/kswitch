@@ -132,7 +132,7 @@ func (s *EKSStore) StartSearch(channel chan storetypes.SearchResult) {
 	defer cancel()
 
 	if err := s.InitializeEKSStore(); err != nil {
-		err := fmt.Errorf("failed to initialize store. This is most likely a problem with your provided aws credentials: %v", err)
+		err := fmt.Errorf("failed to initialize store. This is most likely a problem with your provided aws credentials: %w", err)
 		channel <- storetypes.SearchResult{
 			Error: err,
 		}
@@ -321,7 +321,7 @@ type AWSLogrusBridgeLogger struct {
 }
 
 // Logf logs the given classification and message to the underlying logger.
-func (s AWSLogrusBridgeLogger) Logf(classification logging.Classification, format string, v ...interface{}) {
+func (s AWSLogrusBridgeLogger) Logf(classification logging.Classification, format string, v ...any) {
 	level, err := logrus.ParseLevel(string(classification))
 	if err != nil {
 		level = logrus.DebugLevel
