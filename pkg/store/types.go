@@ -15,8 +15,6 @@
 package store
 
 import (
-	"sync"
-
 	"github.com/MichaelSp/kswitch/pkg/store/doks"
 	gardenclient "github.com/MichaelSp/kswitch/pkg/store/gardener/copied_gardenctlv2"
 	"github.com/MichaelSp/kswitch/pkg/store/plugins"
@@ -58,39 +56,39 @@ type VaultStore struct {
 
 type GardenerStore struct {
 	BaseStore
+	lazyInit
 	GardenClient           gardenclient.Client
 	Client                 client.Client
 	Config                 *types.StoreConfigGardener
 	LandscapeIdentity      string
 	LandscapeName          string
 	StateDirectory         string
-	CachePathToShoot       map[string]gardencorev1beta1.Shoot
-	PathToShootLock        sync.RWMutex
-	CachePathToManagedSeed map[string]seedmanagementv1alpha1.ManagedSeed
-	PathToManagedSeedLock  sync.RWMutex
-	CacheCaNameToCACM      map[string]corev1.ConfigMap
-	CaNameToCACMLock       sync.RWMutex
+	CachePathToShoot       *clusterCache[string, gardencorev1beta1.Shoot]
+	CachePathToManagedSeed *clusterCache[string, seedmanagementv1alpha1.ManagedSeed]
+	CacheCaNameToCACM      *clusterCache[string, corev1.ConfigMap]
 }
 
 type EKSStore struct {
 	BaseStore
+	lazyInit
 	Client *awseks.Client
 	Config *types.StoreConfigEKS
 	// DiscoveredClusters maps the kubeconfig path (az_<resource-group>--<cluster-name>) -> cluster
 	// This is a cache for the clusters discovered during the initial search for kubeconfig paths
 	// when not using a search index
-	DiscoveredClusters map[string]*eks.Cluster
+	DiscoveredClusters *clusterCache[string, *eks.Cluster]
 	StateDirectory     string
 }
 
 type GKEStore struct {
 	BaseStore
+	lazyInit
 	GkeClient *gkev1.Service
 	Config    *types.StoreConfigGKE
 	// DiscoveredClusters maps the kubeconfig path (gke--project-name--clusterName) -> cluster
 	// This is a cache for the clusters discovered during the initial search for kubeconfig paths
 	// when not using a search index
-	DiscoveredClusters map[string]*gkev1.Cluster
+	DiscoveredClusters *clusterCache[string, *gkev1.Cluster]
 	// ProjectNameToID contains a mapping projectName -> project ID
 	// used to construct the kubeconfig path containing the project name instead of a technical project id
 	ProjectNameToID map[string]string
@@ -99,23 +97,20 @@ type GKEStore struct {
 
 type AzureStore struct {
 	BaseStore
-	// DiscoveredClustersMutex is a mutex allow many reads, one write mutex to synchronize writes
-	// to the DiscoveredClusters map.
-	// This can happen when a goroutine still discovers clusters while another goroutine computes the preview for a missing cluster.
-	DiscoveredClustersMutex sync.RWMutex
-	AksClient               *armcontainerservice.ManagedClustersClient
-	Config                  *types.StoreConfigAzure
+	lazyInit
+	AksClient *armcontainerservice.ManagedClustersClient
+	Config    *types.StoreConfigAzure
 	// DiscoveredClusters maps the kubeconfig path (az_<resource-group>--<cluster-name>) -> cluster
 	// This is a cache for the clusters discovered during the initial search for kubeconfig paths
 	// when not using a search index
-	DiscoveredClusters map[string]*armcontainerservice.ManagedCluster
+	DiscoveredClusters *clusterCache[string, *armcontainerservice.ManagedCluster]
 	StateDirectory     string
 }
 
 type ExoscaleStore struct {
 	BaseStore
 	Client             *exoscale.Client
-	DiscoveredClusters map[exoscale.UUID]ExoscaleKube
+	DiscoveredClusters *clusterCache[exoscale.UUID, ExoscaleKube]
 }
 
 type RancherStore struct {
@@ -127,24 +122,20 @@ type RancherStore struct {
 type OVHStore struct {
 	BaseStore
 	Client       *ovh.Client
-	OVHKubeCache map[string]OVHKube // map[clusterID]OVHKube
+	OVHKubeCache *clusterCache[string, OVHKube] // keyed by clusterID
 }
 
 type ScalewayStore struct {
 	BaseStore
 	Client             *scw.Client
-	DiscoveredClusters map[string]ScalewayKube
+	DiscoveredClusters *clusterCache[string, ScalewayKube]
 }
 
 type DigitalOceanStore struct {
 	BaseStore
-	// DiscoveredClustersMutex is a mutex allow many reads, one write mutex to synchronize writes
-	// to the DiscoveredClusters map.
-	// This can happen when a goroutine still discovers clusters while another goroutine computes the preview for a missing cluster.
-	DiscoveredClustersMutex                   sync.RWMutex
-	ContextNameAndClusterNameToClusterIDMutex sync.RWMutex
-	ContextToKubernetesService                map[string]do.KubernetesService
-	Config                                    doks.DoctlConfig
+	lazyInit
+	ContextToKubernetesService map[string]do.KubernetesService
+	Config                     doks.DoctlConfig
 }
 
 type AkamaiStore struct {

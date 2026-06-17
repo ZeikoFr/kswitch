@@ -62,7 +62,7 @@ func NewOVHStore(store types.KubeconfigStore) (*OVHStore, error) {
 	return &OVHStore{
 		BaseStore:    NewBaseStore(types.StoreKindOVH, store),
 		Client:       ovhClient,
-		OVHKubeCache: make(map[string]OVHKube),
+		OVHKubeCache: newClusterCache[string, OVHKube](),
 	}, nil
 }
 
@@ -128,7 +128,7 @@ func (r *OVHStore) StartSearch(channel chan storetypes.SearchResult) {
 				return
 			}
 			kube.Project = project
-			r.OVHKubeCache[kube.ID] = kube
+			r.OVHKubeCache.Set(kube.ID, kube)
 
 			channel <- storetypes.SearchResult{
 				KubeconfigPath: kube.Name,
@@ -156,7 +156,7 @@ func (r *OVHStore) GetKubeconfigForPath(path string, tags map[string]string) ([]
 	project := tags[tagOVHProjectID]
 	if clusterID == "" || project == "" {
 		// fallback for entries without tags: resolve from the cache by name
-		for _, c := range r.OVHKubeCache {
+		for _, c := range r.OVHKubeCache.Values() {
 			if c.Name == path {
 				clusterID = c.ID
 				project = c.Project

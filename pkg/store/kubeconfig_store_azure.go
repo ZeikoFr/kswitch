@@ -61,12 +61,16 @@ func NewAzureStore(store types.KubeconfigStore, stateDir string) (*AzureStore, e
 		BaseStore:          NewBaseStore(types.StoreKindAzure, store),
 		Config:             storeConfig,
 		StateDirectory:     stateDir,
-		DiscoveredClusters: make(map[string]*armcontainerservice.ManagedCluster),
+		DiscoveredClusters: newClusterCache[string, *armcontainerservice.ManagedCluster](),
 	}, nil
 }
 
 // InitializeAzureStore initializes the Azure store
 func (s *AzureStore) InitializeAzureStore() error {
+	return s.ensure(s.initialize)
+}
+
+func (s *AzureStore) initialize() error {
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		return fmt.Errorf("obtaining Azure credentials failed: %v", err)
@@ -175,7 +179,7 @@ func (s *AzureStore) returnSearchResultsForClusters(channel chan storetypes.Sear
 		s.Logger.Debugf("Obtained resource group %s", *resourceGroup)
 
 		kubeconfigPath := getAzureKubeconfigPath(*resourceGroup, *cluster.Name)
-		s.insertIntoClusterCache(kubeconfigPath, cluster)
+		s.DiscoveredClusters.Set(kubeconfigPath, cluster)
 
 		channel <- storetypes.SearchResult{
 			KubeconfigPath: kubeconfigPath,
@@ -201,7 +205,7 @@ func (s *AzureStore) GetContextPrefix(path string) string {
 
 // IsInitialized checks if the store has been initialized already
 func (s *AzureStore) IsInitialized() bool {
-	return s.AksClient != nil && s.Config != nil
+	return s.done()
 }
 
 func (s *AzureStore) GetKubeconfigForPath(path string, tags map[string]string) ([]byte, error) {
@@ -288,11 +292,11 @@ func (s *AzureStore) GetSearchPreview(path string, _ map[string]string) (string,
 	}
 
 	// the cluster should be in the cache, but do not fail if it is not
-	cluster := s.readFromClusterCache(path)
+	cluster, hasCluster := s.DiscoveredClusters.Get(path)
 
 	// cluster has not been discovered from the AKS API yet
 	// this is the case when a search index is used
-	if cluster == nil {
+	if !hasCluster {
 		// The name (resource_group, cluster) of the cluster to retrieve.
 		// we can safely use the client, as we know the store has been previously initialized
 		resp, err := s.AksClient.Get(ctx, resourceGroup, clusterName, nil)
@@ -300,7 +304,7 @@ func (s *AzureStore) GetSearchPreview(path string, _ map[string]string) (string,
 			return "", fmt.Errorf("failed to get Azure cluster with name %q : %w", clusterName, err)
 		}
 		cluster = &resp.ManagedCluster
-		s.insertIntoClusterCache(path, cluster)
+		s.DiscoveredClusters.Set(path, cluster)
 	}
 
 	asciTree := gotree.New(clusterName)
@@ -322,16 +326,4 @@ func (s *AzureStore) GetSearchPreview(path string, _ map[string]string) (string,
 	asciTree.Add(fmt.Sprintf("Subscription ID: %s", *s.Config.SubscriptionID))
 
 	return asciTree.Print(), nil
-}
-
-func (s *AzureStore) readFromClusterCache(key string) *armcontainerservice.ManagedCluster {
-	s.DiscoveredClustersMutex.RLock()
-	defer s.DiscoveredClustersMutex.RUnlock()
-	return s.DiscoveredClusters[key]
-}
-
-func (s *AzureStore) insertIntoClusterCache(key string, value *armcontainerservice.ManagedCluster) {
-	s.DiscoveredClustersMutex.Lock()
-	defer s.DiscoveredClustersMutex.Unlock()
-	s.DiscoveredClusters[key] = value
 }

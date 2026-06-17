@@ -71,7 +71,7 @@ func NewGKEStore(store types.KubeconfigStore, stateDir string) (*GKEStore, error
 		Config:             gkeStoreConfig,
 		StateDirectory:     stateDir,
 		ProjectNameToID:    map[string]string{},
-		DiscoveredClusters: map[string]*container.Cluster{},
+		DiscoveredClusters: newClusterCache[string, *container.Cluster](),
 	}, nil
 }
 
@@ -79,6 +79,10 @@ func NewGKEStore(store types.KubeconfigStore, stateDir string) (*GKEStore, error
 // Decoupled from the NewGKEStore() to be called when starting the search to reduce
 // time when the CLI can start showing the fuzzy search
 func (s *GKEStore) InitializeGKEStore() error {
+	return s.ensure(s.initialize)
+}
+
+func (s *GKEStore) initialize() error {
 	ctx := context.Background()
 
 	// Create GKE client
@@ -196,7 +200,7 @@ func (s *GKEStore) StartSearch(channel chan storetypes.SearchResult) {
 			kubeconfigPath := fmt.Sprintf("gke_%s--%s--%s", projectName, f.Location, f.Name)
 
 			// cache for when getting the kubeconfig for the unique path later
-			s.DiscoveredClusters[kubeconfigPath] = f
+			s.DiscoveredClusters.Set(kubeconfigPath, f)
 
 			channel <- storetypes.SearchResult{
 				KubeconfigPath: kubeconfigPath,
@@ -219,7 +223,7 @@ func (s *GKEStore) GetContextPrefix(path string) string {
 
 // IsInitialized checks if the store has been initialized already
 func (s *GKEStore) IsInitialized() bool {
-	return s.GkeClient != nil && s.Config != nil
+	return s.done()
 }
 
 func (s *GKEStore) GetKubeconfigForPath(path string, _ map[string]string) ([]byte, error) {
@@ -238,11 +242,11 @@ func (s *GKEStore) GetKubeconfigForPath(path string, _ map[string]string) ([]byt
 
 	projectID := s.ProjectNameToID[strings.TrimPrefix(projectName, "gke_")]
 
-	cluster := s.DiscoveredClusters[path]
+	cluster, ok := s.DiscoveredClusters.Get(path)
 
 	// cluster has not been discovered from the GCP API yet
 	// this is the case when a search index is used
-	if cluster == nil {
+	if !ok {
 		// The name (project, location, cluster) of the cluster to retrieve.
 		// Specified in the format 'projects/*/locations/*/clusters/*'.
 		name := fmt.Sprintf("projects/%s/locations/%s/clusters/%s", projectID, location, clusterName)

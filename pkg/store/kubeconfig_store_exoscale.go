@@ -61,7 +61,7 @@ func NewExoscaleStore(store types.KubeconfigStore) (*ExoscaleStore, error) {
 	return &ExoscaleStore{
 		BaseStore:          NewBaseStore(types.StoreKindExoscale, store),
 		Client:             client,
-		DiscoveredClusters: make(map[v3.UUID]ExoscaleKube),
+		DiscoveredClusters: newClusterCache[v3.UUID, ExoscaleKube](),
 	}, nil
 }
 
@@ -124,12 +124,12 @@ func (s *ExoscaleStore) StartSearch(channel chan storetypes.SearchResult) {
 
 		for _, cluster := range clusters.SKSClusters {
 			// Record the cluster in memory
-			s.DiscoveredClusters[cluster.ID] = ExoscaleKube{
+			s.DiscoveredClusters.Set(cluster.ID, ExoscaleKube{
 				ID:           cluster.ID,
 				Name:         cluster.Name,
 				ZoneName:     zone.Name,
 				ZoneEndpoint: zone.APIEndpoint,
-			}
+			})
 
 			s.Logger.Debugf("Discovered SKS cluster name: %s and id: %s in zone %s", cluster.Name, cluster.ID, zone.Name)
 
@@ -159,7 +159,7 @@ func (s *ExoscaleStore) GetKubeconfigForPath(path string, _ map[string]string) (
 
 	// Find the stored cluster that matches both zone and cluster name
 	var match *ExoscaleKube
-	for _, c := range s.DiscoveredClusters {
+	for _, c := range s.DiscoveredClusters.Values() {
 		if string(c.ZoneName) == zoneName && c.Name == clusterName {
 			match = &c
 			break
