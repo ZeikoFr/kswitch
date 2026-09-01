@@ -308,11 +308,59 @@ type StoreConfigRancher struct {
 	RancherToken string `yaml:"rancherToken"`
 }
 
+// OVHAuthMode selects how the kubeconfigs handed out by the OVH store authenticate
+// against the cluster.
+type OVHAuthMode string
+
+const (
+	// OVHAuthModeCertificate hands out the kubeconfig OVH generates, which embeds a
+	// long-lived admin client certificate. This is the default.
+	OVHAuthModeCertificate OVHAuthMode = "certificate"
+	// OVHAuthModeOIDC hands out a kubeconfig delegating the authentication to an OIDC
+	// credential plugin, so that the cluster is reached with the identity of the user
+	// instead of with an admin certificate. The cluster must have an OIDC provider
+	// configured, see
+	// https://docs.ovhcloud.com/en/guides/public-cloud/containers-orchestration/managed-kubernetes/configure-oidc-provider
+	OVHAuthModeOIDC OVHAuthMode = "oidc"
+)
+
 type StoreConfigOVH struct {
 	OVHApplicationKey    string `yaml:"application_key"`
 	OVHApplicationSecret string `yaml:"application_secret"`
 	OVHConsumerKey       string `yaml:"consumer_key"`
 	OVHEndpoint          string `yaml:"endpoint"`
+	// OVHAuthMode is how the kubeconfigs of this store authenticate against the
+	// cluster. Defaults to OVHAuthModeCertificate, the behaviour of the store before
+	// this option existed.
+	OVHAuthMode OVHAuthMode `yaml:"auth_mode"`
+	// OVHOIDC configures the credential plugin invoked by the generated kubeconfigs.
+	// Required when, and only used when, OVHAuthMode is OVHAuthModeOIDC.
+	OVHOIDC *StoreConfigOVHOIDC `yaml:"oidc"`
+}
+
+// StoreConfigOVHOIDC describes the OIDC credential plugin the kubeconfigs of the OVH
+// store delegate their authentication to. The defaults target kubelogin
+// (https://github.com/int128/kubelogin) installed as a kubectl plugin.
+type StoreConfigOVHOIDC struct {
+	// IssuerURL is the OIDC provider the cluster trusts, e.g.
+	// https://login.microsoftonline.com/<tenant-id>/v2.0. Required.
+	IssuerURL string `yaml:"issuer_url"`
+	// ClientID is the OIDC client the credential plugin authenticates with. Required.
+	ClientID string `yaml:"client_id"`
+	// ClientSecret is the secret of a confidential OIDC client. Left empty for the
+	// public clients a desktop login flow normally uses.
+	ClientSecret string `yaml:"client_secret"`
+	// ExtraScopes are requested on top of openid, typically to obtain the claim the
+	// cluster reads the username or the groups from.
+	ExtraScopes []string `yaml:"extra_scopes"`
+	// Command is the credential plugin binary. Defaults to kubectl.
+	Command string `yaml:"command"`
+	// Args are passed to Command before the generated OIDC flags. Defaults to
+	// oidc-login get-token.
+	Args []string `yaml:"args"`
+	// ExtraArgs are appended after the generated OIDC flags, for the credential plugin
+	// options this configuration does not model, e.g. --grant-type=authcode-keyboard.
+	ExtraArgs []string `yaml:"extra_args"`
 }
 
 type StoreConfigScaleway struct {

@@ -127,6 +127,12 @@ type OVHStore struct {
 	// cannot be shared between goroutines, see ovhClientPool
 	Clients      *ovhClientPool
 	OVHKubeCache *clusterCache[string, OVHKube] // keyed by clusterID
+	// AuthMode is how the kubeconfigs handed out by this store authenticate against
+	// the cluster. The zero value is types.OVHAuthModeCertificate.
+	AuthMode types.OVHAuthMode
+	// OIDC is the credential plugin configuration, set when AuthMode is
+	// types.OVHAuthModeOIDC and nil otherwise
+	OIDC *types.StoreConfigOVHOIDC
 }
 
 type ScalewayStore struct {
